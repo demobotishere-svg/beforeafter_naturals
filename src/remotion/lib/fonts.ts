@@ -20,10 +20,10 @@ import { loadFont as loadCormorant } from "@remotion/google-fonts/Cormorant";
 import { loadFont as loadAnton } from "@remotion/google-fonts/Anton";
 import { loadFont as loadInter } from "@remotion/google-fonts/Inter";
 
-export const FONT_PLAYFAIR = loadPlayfair().fontFamily;
-export const FONT_CORMORANT = loadCormorant().fontFamily;
-export const FONT_ANTON = loadAnton().fontFamily;
-export const FONT_INTER = loadInter().fontFamily;
+export const FONT_PLAYFAIR = loadPlayfair("normal", { ignoreTooManyRequestsWarning: true }).fontFamily;
+export const FONT_CORMORANT = loadCormorant("normal", { ignoreTooManyRequestsWarning: true }).fontFamily;
+export const FONT_ANTON = loadAnton("normal", { ignoreTooManyRequestsWarning: true }).fontFamily;
+export const FONT_INTER = loadInter("normal", { ignoreTooManyRequestsWarning: true }).fontFamily;
 
 // Serif/sans fallbacks kept so text never collapses if a face fails to load.
 export const SERIF_STACK = `'Georgia', 'Times New Roman', serif`;

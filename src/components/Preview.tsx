@@ -5,35 +5,6 @@ import { Player } from "@remotion/player";
 import { MasterTemplate } from "../remotion/MasterTemplate";
 
 export const Preview = ({ videoUrls, claudeConfig, templateId, customAudioUrl }: { videoUrls: string[] | null; claudeConfig: any; templateId: string; customAudioUrl: string | null }) => {
-  const [isRendering, setIsRendering] = useState(false);
-  const [outputUrl, setOutputUrl] = useState<string | null>(null);
-
-  const handleRender = async () => {
-    if (!videoUrls) return;
-    setIsRendering(true);
-    try {
-      const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
-      const absoluteUrls = videoUrls.map(url => 
-        url.startsWith("/") ? `${origin}${url}` : url
-      );
-
-      const res = await fetch("/api/render", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ videoUrls: absoluteUrls, templateId, claudeConfig, dynamicDuration, bgmUrl: customAudioUrl })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setOutputUrl(data.url);
-      } else {
-        alert("Render failed: " + data.error);
-      }
-    } catch (err) {
-      alert("Error: " + String(err));
-    } finally {
-      setIsRendering(false);
-    }
-  };
 
   const FPS = 24;
   let dynamicDuration = 480; // default 20s
@@ -47,7 +18,7 @@ export const Preview = ({ videoUrls, claudeConfig, templateId, customAudioUrl }:
   }
 
   return (
-    <div className="glass-panel" style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+    <div className="glass-panel" style={{ display: "flex", flexDirection: "column" }}>
       <h2 style={{ marginBottom: "1.5rem", fontWeight: 600 }}>Preview & Render</h2>
       
       <div className="preview-container">
@@ -76,52 +47,7 @@ export const Preview = ({ videoUrls, claudeConfig, templateId, customAudioUrl }:
         )}
       </div>
 
-      <div style={{ marginTop: "2rem" }}>
-        {outputUrl ? (
-          <div style={{ textAlign: "center" }}>
-            <h3 style={{ color: "var(--accent)", marginBottom: "1rem", fontWeight: 700 }}>✨ Render Complete!</h3>
-            <p style={{ marginBottom: "1.5rem", color: "#ccc" }}>Your AI-enhanced cinematic edit is ready.</p>
-            
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px", alignItems: "center" }}>
-              <a 
-                href={`/api/download?file=${outputUrl.split('/').pop()}`} 
-                className="btn" 
-                style={{ background: "linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)", color: "#fff", width: "100%", maxWidth: "320px", display: "flex", justifyContent: "center", alignItems: "center", gap: "10px" }}
-              >
-                📱 Download for Instagram Reel
-              </a>
-              <a 
-                href={`/api/download?file=${outputUrl.split('/').pop()}`} 
-                className="btn" 
-                style={{ background: "#1877F2", color: "#fff", width: "100%", maxWidth: "320px", display: "flex", justifyContent: "center", alignItems: "center", gap: "10px" }}
-              >
-                📱 Download for Facebook Reel
-              </a>
-              <a 
-                href={`/api/download?file=${outputUrl.split('/').pop()}`} 
-                className="btn" 
-                style={{ background: "#FF0000", color: "#fff", width: "100%", maxWidth: "320px", display: "flex", justifyContent: "center", alignItems: "center", gap: "10px" }}
-              >
-                ▶️ Download for YouTube Shorts
-              </a>
-            </div>
-          </div>
-        ) : (
-          <div style={{ textAlign: "center" }}>
-            <p style={{ marginBottom: "1rem", color: "#aaa" }}>
-              Ready to export? The AI will compile your cinematic cuts in high resolution.
-            </p>
-            <button 
-              className="btn" 
-              onClick={handleRender} 
-              disabled={isRendering}
-              style={{ width: "100%", maxWidth: "320px", display: "inline-block" }}
-            >
-              {isRendering ? <div className="loader" style={{ margin: "0 auto" }} /> : "Render & Download Video"}
-            </button>
-          </div>
-        )}
-      </div>
+
     </div>
   );
 };
