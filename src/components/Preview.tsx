@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { Player } from "@remotion/player";
 import { MasterTemplate } from "../remotion/MasterTemplate";
 
-export const Preview = ({ videoUrls, templateId }: { videoUrls: string[] | null; templateId: string }) => {
+export const Preview = ({ videoUrls, claudeConfig, templateId, customAudioUrl }: { videoUrls: string[] | null; claudeConfig: any; templateId: string; customAudioUrl: string | null }) => {
   const [isRendering, setIsRendering] = useState(false);
   const [outputUrl, setOutputUrl] = useState<string | null>(null);
 
@@ -12,8 +12,6 @@ export const Preview = ({ videoUrls, templateId }: { videoUrls: string[] | null;
     if (!videoUrls) return;
     setIsRendering(true);
     try {
-      // Convert relative paths to absolute URLs so the headless Remotion renderer
-      // can reliably fetch the videos directly from the Next.js host server.
       const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
       const absoluteUrls = videoUrls.map(url => 
         url.startsWith("/") ? `${origin}${url}` : url
@@ -22,7 +20,7 @@ export const Preview = ({ videoUrls, templateId }: { videoUrls: string[] | null;
       const res = await fetch("/api/render", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ videoUrls: absoluteUrls, templateId })
+        body: JSON.stringify({ videoUrls: absoluteUrls, templateId, claudeConfig, dynamicDuration, bgmUrl: customAudioUrl })
       });
       const data = await res.json();
       if (data.success) {
@@ -36,6 +34,17 @@ export const Preview = ({ videoUrls, templateId }: { videoUrls: string[] | null;
       setIsRendering(false);
     }
   };
+
+  const FPS = 24;
+  let dynamicDuration = 480; // default 20s
+  if (claudeConfig) {
+    let d1 = 3 * FPS, d2 = 2 * FPS, d3 = 10 * FPS, d4 = 5 * FPS;
+    if (claudeConfig.entering) d1 = Math.max(1, Math.floor(((claudeConfig.entering.trimEnd - claudeConfig.entering.trimStart) / (claudeConfig.entering.playbackRate || 1)) * FPS));
+    if (claudeConfig.choosing) d2 = Math.max(1, Math.floor(((claudeConfig.choosing.trimEnd - claudeConfig.choosing.trimStart) / (claudeConfig.choosing.playbackRate || 1)) * FPS));
+    if (claudeConfig.haircut) d3 = Math.max(1, Math.floor(((claudeConfig.haircut.trimEnd - claudeConfig.haircut.trimStart) / (claudeConfig.haircut.playbackRate || 1)) * FPS));
+    if (claudeConfig.reveal) d4 = Math.max(1, Math.floor(((claudeConfig.reveal.trimEnd - claudeConfig.reveal.trimStart) / (claudeConfig.reveal.playbackRate || 1)) * FPS));
+    dynamicDuration = d1 + d2 + d3 + d4;
+  }
 
   return (
     <div className="glass-panel" style={{ height: "100%", display: "flex", flexDirection: "column" }}>
@@ -52,7 +61,7 @@ export const Preview = ({ videoUrls, templateId }: { videoUrls: string[] | null;
           <div className="player-wrapper">
             <Player
               component={MasterTemplate}
-              durationInFrames={480}
+              durationInFrames={dynamicDuration}
               compositionWidth={1080}
               compositionHeight={1920}
               fps={24}
@@ -61,7 +70,7 @@ export const Preview = ({ videoUrls, templateId }: { videoUrls: string[] | null;
                 height: 1920 / 3,
               }}
               controls
-              inputProps={{ videoUrls, templateId: templateId as import("../remotion/MasterTemplate").TemplateId, logoUrl: "/logo.png" }}
+              inputProps={{ videoUrls, templateId: templateId as import("../remotion/MasterTemplate").TemplateId, logoUrl: "/logo.png", claudeConfig, bgmUrl: customAudioUrl || undefined }}
             />
           </div>
         )}

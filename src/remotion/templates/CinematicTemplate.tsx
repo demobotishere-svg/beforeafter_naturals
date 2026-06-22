@@ -5,14 +5,6 @@
  * Teal-shadow / warm-skin filmic grade, animated grain, organic hand-held
  * camera, warm light-leak + luma-dissolve transitions, a single chromatic
  * spike on the hero reveal, and Playfair masked-baseline titles.
- *
- * TIMELINE (unchanged, locked @ 24fps):
- *   0  – 3s   (f   0– 71) → Clip1 Entering   (slow luxe push-in)
- *   3  – 5s   (f  72–119) → Clip2 Choosing    (settle pull-back)
- *   5  – 15s  (f 120–359) → Clip3 Process      (6 organic sections + chroma)
- *  15  – 20s  (f 360–479) → Clip4 Reveal       (heroic pull-back)
- *
- * Art elevated; the S1–S4 architecture and Sequence windows are untouched.
  * ============================================================
  */
 
@@ -36,32 +28,13 @@ import { ChromaClip, chromaTextShadow } from "../lib/chroma";
 import { MaskedReveal, type RevealTheme } from "../lib/text";
 import { FONT_PLAYFAIR } from "../lib/fonts";
 
-// ── TIMELINE CONSTANTS (locked) ─────────────────────────────────────────────
 const FPS = 24;
-const TOTAL = 20 * FPS; // 480
-const S1 = 0;
-const S2 = 3 * FPS; // 72
-const S3 = 5 * FPS; // 120
-const S4 = 15 * FPS; // 360
-const D1 = S2 - S1; // 72
-const D2 = S3 - S2; // 48
-const D3 = S4 - S3; // 240
-const D4 = TOTAL - S4; // 120
 const XF = 8; // cross-fade window
-const SEC = Math.floor(D3 / 6); // 40 frames per Clip3 section
-
-// Raw clip durations (ffprobe) → playbackRate so Video fills its slot, no freeze.
-const RAW_C1 = 2.6;
-const RAW_C3 = 10.005;
-const RAW_C4 = 6.0;
-const RATE_C1 = RAW_C1 / ((D1 + XF) / FPS); // ≈0.78 — plays the FULL clip (was hardcoded 0.45)
-const RATE_C3 = RAW_C3 / ((D3 + XF) / FPS); // ≈0.968
-const RATE_C4 = RAW_C4 / (D4 / FPS); // 1.2
 
 const fadeIn = (frame: number, seqStart: number) => ip(frame, [seqStart, seqStart + XF], [0, 1], EASE_GLIDE);
 
-// ── CLIP 1 — Entering (slow luxe push-in + drift) ───────────────────────────
-const Clip1: React.FC<{ src: string; frame: number }> = ({ src, frame }) => {
+// ── CLIP 1 — Entering ────────────────────────────────────────────────────────
+const Clip1: React.FC<{ src: string; frame: number; config?: any; S1: number; D1: number; playbackRate: number }> = ({ src, frame, config, S1, D1, playbackRate }) => {
   const lf = frame - S1;
   const base: Cam = {
     scale: ip(lf, [0, D1 + XF], [1.08, 1.2], EASE_LUXE),
@@ -70,11 +43,12 @@ const Clip1: React.FC<{ src: string; frame: number }> = ({ src, frame }) => {
     rot: ip(lf, [0, D1 + XF], [-0.5, 0.4], EASE_LUXE),
   };
   const c = organic(base, frame, { swayPx: 10, breathe: 0.005, rotDeg: 0.5, seed: 0.2 });
-  return <Video src={src} muted playbackRate={RATE_C1} style={{ width: "100%", height: "100%", objectFit: "cover", transform: cam(c), filter: KODAK_PORTRA }} />;
+  const startFrom = config ? Math.floor(config.trimStart * FPS) : 0;
+  return <Video startFrom={startFrom} src={src} muted playbackRate={playbackRate} style={{ width: "100%", height: "100%", objectFit: "cover", transform: cam(c), filter: KODAK_PORTRA }} />;
 };
 
-// ── CLIP 2 — Choosing (settle pull-back, cross-fades in) ────────────────────
-const Clip2: React.FC<{ src: string; frame: number }> = ({ src, frame }) => {
+// ── CLIP 2 — Choosing ────────────────────────────────────────────────────────
+const Clip2: React.FC<{ src: string; frame: number; config?: any; S2: number; D2: number; playbackRate: number }> = ({ src, frame, config, S2, D2, playbackRate }) => {
   const lf = frame - S2;
   const base: Cam = {
     scale: ip(lf, [0, D2 + XF], [1.18, 1.07], EASE_LUXE),
@@ -83,15 +57,16 @@ const Clip2: React.FC<{ src: string; frame: number }> = ({ src, frame }) => {
     rot: ip(lf, [0, D2 + XF], [0.5, -0.3], EASE_LUXE),
   };
   const c = organic(base, frame, { swayPx: 9, breathe: 0.005, rotDeg: 0.5, seed: 1.1 });
+  const startFrom = config ? Math.floor(config.trimStart * FPS) : 0;
   return (
     <AbsoluteFill style={{ opacity: fadeIn(frame, S2) }}>
-      <OffthreadVideo startFrom={0} src={src} muted style={{ width: "100%", height: "100%", objectFit: "cover", transform: cam(c), filter: ALEXA_ARRI }} />
+      <OffthreadVideo startFrom={startFrom} src={src} muted playbackRate={playbackRate} style={{ width: "100%", height: "100%", objectFit: "cover", transform: cam(c), filter: ALEXA_ARRI }} />
     </AbsoluteFill>
   );
 };
 
-// ── CLIP 3 — Process (6 organic sections, chroma fringe on each cut) ────────
-const Clip3: React.FC<{ src: string; frame: number }> = ({ src, frame }) => {
+// ── CLIP 3 — Process ────────────────────────────────────────────────────────
+const Clip3: React.FC<{ src: string; frame: number; config?: any; S3: number; D3: number; SEC: number; playbackRate: number }> = ({ src, frame, config, S3, D3, SEC, playbackRate }) => {
   const lf = frame - S3;
   const section = Math.min(Math.floor(lf / SEC), 5);
   const sf = lf - section * SEC;
@@ -106,18 +81,18 @@ const Clip3: React.FC<{ src: string; frame: number }> = ({ src, frame }) => {
     case 5: base = { scale: ip(sf, [0, SEC], [1.07, 1.2], EASE_ACCEL), tx: 0, ty: 0, rot: -0.4 }; break;
   }
   const c = organic(base, frame, { swayPx: 8, breathe: 0.005, rotDeg: 0.4, seed: section * 0.7 });
-  // Subtle RGB fringe at each section cut (sf≈0), classy not glitchy.
   const splitPx = ip(sf, [0, 5], [3.5, 0], EASE_ACCEL);
   const filter = section === 1 || section === 4 ? ALEXA_ARRI : KODAK_PORTRA;
+  const startFrom = config ? Math.floor(config.trimStart * FPS) : 0;
   return (
     <AbsoluteFill style={{ opacity: fadeIn(frame, S3) }}>
-      <ChromaClip src={src} transform={cam(c)} filter={filter} splitPx={splitPx} playbackRate={RATE_C3} />
+      <ChromaClip src={src} transform={cam(c)} filter={filter} splitPx={splitPx} playbackRate={playbackRate} startFrom={startFrom} />
     </AbsoluteFill>
   );
 };
 
-// ── CLIP 4 — Reveal (heroic pull-back, print-film punch) ───────────────────
-const Clip4: React.FC<{ src: string; frame: number }> = ({ src, frame }) => {
+// ── CLIP 4 — Reveal ────────────────────────────────────────────────────────
+const Clip4: React.FC<{ src: string; frame: number; config?: any; S4: number; D4: number; playbackRate: number }> = ({ src, frame, config, S4, D4, playbackRate }) => {
   const lf = frame - S4;
   const base: Cam = {
     scale: ip(lf, [0, D4], [1.2, 1.06], EASE_LUXE),
@@ -126,35 +101,25 @@ const Clip4: React.FC<{ src: string; frame: number }> = ({ src, frame }) => {
     rot: ip(lf, [0, D4], [0.6, -0.2], EASE_LUXE),
   };
   const c = organic(base, frame, { swayPx: 7, breathe: 0.004, rotDeg: 0.4, seed: 2.4 });
-  // Saturation/warmth drifts up across the reveal → earns the payoff.
   const warm = ip(lf, [0, D4 * 0.6], [1.16, 1.26], EASE_GLIDE);
   const filter = `${KODAK_2383} saturate(${warm.toFixed(3)})`;
+  const startFrom = config ? Math.floor(config.trimStart * FPS) : 0;
   return (
     <AbsoluteFill style={{ opacity: fadeIn(frame, S4) }}>
-      <Video src={src} muted playbackRate={RATE_C4} style={{ width: "100%", height: "100%", objectFit: "cover", transform: cam(c), filter }} />
+      <Video startFrom={startFrom} src={src} muted playbackRate={playbackRate} style={{ width: "100%", height: "100%", objectFit: "cover", transform: cam(c), filter }} />
     </AbsoluteFill>
   );
 };
 
-// ── SPARKLE ✦ (signature corner accent, refined pulse) ─────────────────────
-const Sparkle: React.FC<{ frame: number }> = ({ frame }) => {
-  const opacity = 0.45 + 0.45 * Math.abs(Math.sin(frame * 0.14));
-  const scale = 0.82 + 0.26 * Math.abs(Math.sin(frame * 0.1));
-  return (
-    <AbsoluteFill style={{ pointerEvents: "none", zIndex: 52 }}>
-      <div style={{ position: "absolute", bottom: 92, right: 78, fontSize: 64, color: "white", opacity, transform: `scale(${scale}) rotate(${osc(frame, 260, 6)}deg)`, textShadow: "0 0 22px rgba(255,255,255,0.95), 0 0 46px rgba(255,210,150,0.5)", fontFamily: "serif", lineHeight: 1 }}>✦</div>
-    </AbsoluteFill>
-  );
-};
 
 // ── GOLDEN REVEAL GLOW ──────────────────────────────────────────────────────
-const RevealGlow: React.FC<{ frame: number }> = ({ frame }) => {
+const RevealGlow: React.FC<{ frame: number; S4: number; D4: number }> = ({ frame, S4, D4 }) => {
   const opacity = interpolate(frame, [S4, S4 + 6, S4 + 28, S4 + D4], [0, 0.5, 0.14, 0.06], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: EASE_GLIDE });
   return <AbsoluteFill style={{ background: "radial-gradient(ellipse at 50% 42%, rgba(255,225,100,1) 0%, rgba(255,200,80,0) 62%)", opacity, mixBlendMode: "screen", pointerEvents: "none", zIndex: 46 }} />;
 };
 
-// ── TEXT — Playfair masked baseline reveals ────────────────────────────────
-const TextOverlays: React.FC<{ frame: number }> = ({ frame }) => {
+// ── TEXT OVERLAYS ────────────────────────────────────────────────────────
+const TextOverlays: React.FC<{ frame: number; S4: number }> = ({ frame, S4 }) => {
   const beforeTheme: RevealTheme = { fontFamily: FONT_PLAYFAIR, fontSize: 92, fontWeight: 500, letterSpacing: 26, color: "rgba(255,255,255,0.96)", textShadow: chromaTextShadow(1.2), textTransform: "uppercase" };
   const afterTheme: RevealTheme = { fontFamily: FONT_PLAYFAIR, fontSize: 116, fontWeight: 600, letterSpacing: 34, color: "#f5d061", textShadow: chromaTextShadow(1.6, "0 6px 36px rgba(0,0,0,0.92)"), textTransform: "uppercase" };
   return (
@@ -170,26 +135,61 @@ const TextOverlays: React.FC<{ frame: number }> = ({ frame }) => {
 };
 
 // ── MAIN COMPOSITION ────────────────────────────────────────────────────────
-export const CinematicTemplate: React.FC<{ videoUrls: string[]; bgmUrl?: string }> = ({
+export const CinematicTemplate: React.FC<{ videoUrls: string[]; bgmUrl?: string; claudeConfig?: any }> = ({
   videoUrls,
   bgmUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3",
+  claudeConfig
 }) => {
   const frame = useCurrentFrame();
+
+  // DYNAMIC TIMING MATH
+  let D1 = 3 * FPS;
+  let D2 = 2 * FPS;
+  let D3 = 10 * FPS;
+  let D4 = 5 * FPS;
+
+  let r1 = 1, r2 = 1, r3 = 1, r4 = 1;
+
+  if (claudeConfig) {
+    if (claudeConfig.entering) {
+      r1 = claudeConfig.entering.playbackRate || 1;
+      D1 = Math.max(1, Math.floor(((claudeConfig.entering.trimEnd - claudeConfig.entering.trimStart) / r1) * FPS));
+    }
+    if (claudeConfig.choosing) {
+      r2 = claudeConfig.choosing.playbackRate || 1;
+      D2 = Math.max(1, Math.floor(((claudeConfig.choosing.trimEnd - claudeConfig.choosing.trimStart) / r2) * FPS));
+    }
+    if (claudeConfig.haircut) {
+      r3 = claudeConfig.haircut.playbackRate || 1;
+      D3 = Math.max(1, Math.floor(((claudeConfig.haircut.trimEnd - claudeConfig.haircut.trimStart) / r3) * FPS));
+    }
+    if (claudeConfig.reveal) {
+      r4 = claudeConfig.reveal.playbackRate || 1;
+      D4 = Math.max(1, Math.floor(((claudeConfig.reveal.trimEnd - claudeConfig.reveal.trimStart) / r4) * FPS));
+    }
+  }
+
+  const S1 = 0;
+  const S2 = S1 + D1;
+  const S3 = S2 + D2;
+  const S4 = S3 + D3;
+  const TOTAL = S4 + D4;
+  const SEC = Math.floor(D3 / 6);
+
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
-      <Audio src={bgmUrl} volume={(f) => interpolate(f, [0, 24, TOTAL - 24, TOTAL], [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })} />
 
       {videoUrls[0] && (
-        <Sequence from={S1} durationInFrames={D1 + XF}><Clip1 src={videoUrls[0]} frame={frame} /></Sequence>
+        <Sequence from={S1} durationInFrames={D1 + XF}><Clip1 src={videoUrls[0]} frame={frame} config={claudeConfig?.entering} S1={S1} D1={D1} playbackRate={r1} /></Sequence>
       )}
       {videoUrls[1] && (
-        <Sequence from={S2} durationInFrames={D2 + XF}><Clip2 src={videoUrls[1]} frame={frame} /></Sequence>
+        <Sequence from={S2} durationInFrames={D2 + XF}><Clip2 src={videoUrls[1]} frame={frame} config={claudeConfig?.choosing} S2={S2} D2={D2} playbackRate={r2} /></Sequence>
       )}
       {videoUrls[2] && (
-        <Sequence from={S3} durationInFrames={D3 + XF}><Clip3 src={videoUrls[2]} frame={frame} /></Sequence>
+        <Sequence from={S3} durationInFrames={D3 + XF}><Clip3 src={videoUrls[2]} frame={frame} config={claudeConfig?.haircut} S3={S3} D3={D3} SEC={SEC} playbackRate={r3} /></Sequence>
       )}
       {videoUrls[3] && (
-        <Sequence from={S4} durationInFrames={D4}><Clip4 src={videoUrls[3]} frame={frame} /></Sequence>
+        <Sequence from={S4} durationInFrames={D4}><Clip4 src={videoUrls[3]} frame={frame} config={claudeConfig?.reveal} S4={S4} D4={D4} playbackRate={r4} /></Sequence>
       )}
 
       {/* Signature split-tone finish (cool shadows + warm highlights) */}
@@ -207,13 +207,12 @@ export const CinematicTemplate: React.FC<{ videoUrls: string[]; bgmUrl?: string 
         <LightLeak key={i} frame={frame} at={S3 + i * SEC} window={XF} peak={0.3} />
       ))}
 
-      <RevealGlow frame={frame} />
+      <RevealGlow frame={frame} S4={S4} D4={D4} />
 
       {/* Global finishing layers */}
       <Vignette background="radial-gradient(ellipse at 50% 50%, transparent 42%, rgba(0,0,0,0.86) 100%)" zIndex={50} />
       <FilmGrain frame={frame} opacity={0.055} />
-      <Sparkle frame={frame} />
-      <TextOverlays frame={frame} />
+      <TextOverlays frame={frame} S4={S4} />
 
       {/* Opening fade up */}
       <AbsoluteFill style={{ backgroundColor: "black", opacity: ip(frame, [0, 16], [1, 0], EASE_GLIDE), pointerEvents: "none", zIndex: 70 }} />

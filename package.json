@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@remotion/cli": "^4.0.481",
     "@remotion/google-fonts": "^4.0.481",
     "@remotion/player": "^4.0.481",

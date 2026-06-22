@@ -8,7 +8,12 @@ const execAsync = promisify(exec);
 
 export async function POST(request: NextRequest) {
   try {
-    const { videoUrls, templateId = "cinematic" } = await request.json();
+    const { videoUrls, templateId = "cinematic", claudeConfig, dynamicDuration, bgmUrl } = await request.json();
+
+    let absoluteBgmUrl = bgmUrl;
+    if (bgmUrl?.startsWith("/")) {
+      absoluteBgmUrl = `http://localhost:3000${bgmUrl}`;
+    }
 
     if (!videoUrls || videoUrls.length !== 4) {
       return NextResponse.json({ success: false, error: "Must provide exactly 4 video URLs" }, { status: 400 });
@@ -39,10 +44,13 @@ export async function POST(request: NextRequest) {
       console.warn("Could not convert logo to base64:", e);
     }
 
-    await writeFile(propsPath, JSON.stringify({ videoUrls: localVideoUrls, logoUrl, templateId }));
+    await writeFile(propsPath, JSON.stringify({ videoUrls: localVideoUrls, logoUrl, templateId, claudeConfig, bgmUrl: absoluteBgmUrl }));
 
     // Run remotion render
-    const command = `npx remotion render src/remotion/index.ts SalonEdit public/outputs/${outputFilename} --props=public/outputs/${propsFilename}`;
+    let command = `npx remotion render src/remotion/index.ts SalonEdit public/outputs/${outputFilename} --props=public/outputs/${propsFilename}`;
+    if (dynamicDuration) {
+      command += ` --frames=0-${dynamicDuration - 1}`;
+    }
     
     console.log(`Executing: ${command}`);
     const { stdout, stderr } = await execAsync(command, { cwd: process.cwd() });

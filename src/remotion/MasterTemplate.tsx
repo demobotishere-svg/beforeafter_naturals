@@ -9,24 +9,32 @@ export type TemplateId =
   | "minimalist" 
   | "vlog";
 
-import { AbsoluteFill, Img } from "remotion";
+import { AbsoluteFill, Img, Audio, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 
 export const MasterTemplate: React.FC<{ 
   templateId?: TemplateId; 
   videoUrls: string[]; 
   logoUrl?: string; 
-}> = ({ templateId = "cinematic", videoUrls, logoUrl }) => {
+  claudeConfig?: any;
+  bgmUrl?: string;
+}> = ({ templateId = "cinematic", videoUrls, logoUrl, claudeConfig, bgmUrl }) => {
   let TemplateComponent;
   switch (templateId) {
-    case "cinematic": TemplateComponent = <CinematicTemplate videoUrls={videoUrls} />; break;
-    case "hype": TemplateComponent = <HypeTemplate videoUrls={videoUrls} />; break;
-    case "minimalist": TemplateComponent = <MinimalistTemplate videoUrls={videoUrls} />; break;
-    case "vlog": TemplateComponent = <VlogTemplate videoUrls={videoUrls} />; break;
-    default: TemplateComponent = <CinematicTemplate videoUrls={videoUrls} />; break;
+    case "cinematic": TemplateComponent = <CinematicTemplate videoUrls={videoUrls} claudeConfig={claudeConfig} bgmUrl={bgmUrl} />; break;
+    case "hype": TemplateComponent = <HypeTemplate videoUrls={videoUrls} claudeConfig={claudeConfig} bgmUrl={bgmUrl} />; break;
+    case "minimalist": TemplateComponent = <MinimalistTemplate videoUrls={videoUrls} claudeConfig={claudeConfig} bgmUrl={bgmUrl} />; break;
+    case "vlog": TemplateComponent = <VlogTemplate videoUrls={videoUrls} claudeConfig={claudeConfig} bgmUrl={bgmUrl} />; break;
+    default: TemplateComponent = <CinematicTemplate videoUrls={videoUrls} claudeConfig={claudeConfig} bgmUrl={bgmUrl} />; break;
   }
+  const { durationInFrames } = useVideoConfig();
+  const finalBgmUrl = bgmUrl || "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3";
 
   return (
     <>
+      <Audio 
+        src={finalBgmUrl} 
+        volume={(f) => interpolate(f, [0, 24, durationInFrames - 24, durationInFrames], [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })} 
+      />
       {TemplateComponent}
       {logoUrl && (
         <AbsoluteFill
@@ -38,7 +46,7 @@ export const MasterTemplate: React.FC<{
             zIndex: 999,
           }}
         >
-          <Img src={logoUrl} style={{ width: 180, opacity: 0.9, mixBlendMode: "screen" }} />
+          <Img src={logoUrl} style={{ width: 300, opacity: 0.9, mixBlendMode: "screen" }} />
         </AbsoluteFill>
       )}
     </>
